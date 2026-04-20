@@ -5,7 +5,7 @@ import org.hibernate.accessor.logging.impl.CoreLog;
 
 import java.lang.invoke.MethodHandle;
 
-public class LambdaFieldValueWriter<T> implements HibernateAccessorValueWriter<T> {
+public class LambdaFieldValueWriter implements HibernateAccessorValueWriter {
     private final MethodHandle setter;
 
     public LambdaFieldValueWriter(MethodHandle setter) {
@@ -13,7 +13,7 @@ public class LambdaFieldValueWriter<T> implements HibernateAccessorValueWriter<T
     }
 
     @Override
-    public void set(Object instance, T value) {
+    public void set(Object instance, Object value) {
         try {
             setter.invoke(instance, value);
         } catch (Throwable t) {

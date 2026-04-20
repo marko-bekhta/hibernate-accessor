@@ -3,20 +3,23 @@ package org.hibernate.accessor.reflection.impl;
 import org.hibernate.accessor.HibernateAccessorValueWriter;
 import org.hibernate.accessor.logging.impl.CoreLog;
 
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Objects;
 
-public class HibernateAccessorReflectionMethodValueWriter<T> implements HibernateAccessorValueWriter<T> {
+public class HibernateAccessorReflectionMethodValueWriter implements HibernateAccessorValueWriter {
 
     private final Method method;
 
     public HibernateAccessorReflectionMethodValueWriter(Method setter) {
         this.method = setter;
+        MethodHandles.Lookup lookup;
+        method.setAccessible(true);
     }
 
     @Override
-    public void set(Object instance, T value) {
+    public void set(Object instance, Object value) {
         try {
             method.invoke(instance, value);
         } catch (RuntimeException | IllegalAccessException e) {
@@ -46,7 +49,7 @@ public class HibernateAccessorReflectionMethodValueWriter<T> implements Hibernat
         if (obj == null || !obj.getClass().equals(getClass())) {
             return false;
         }
-        HibernateAccessorReflectionMethodValueWriter<?> other = (HibernateAccessorReflectionMethodValueWriter<?>) obj;
+        HibernateAccessorReflectionMethodValueWriter other = (HibernateAccessorReflectionMethodValueWriter) obj;
         return Objects.equals(method, other.method);
     }
 }

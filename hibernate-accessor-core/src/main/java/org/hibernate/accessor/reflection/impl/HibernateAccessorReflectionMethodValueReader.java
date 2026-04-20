@@ -13,6 +13,7 @@ public class HibernateAccessorReflectionMethodValueReader<T> implements Hibernat
 
     public HibernateAccessorReflectionMethodValueReader(Method getter) {
         this.method = getter;
+        method.setAccessible(true);
     }
 
     @Override

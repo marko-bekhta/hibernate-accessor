@@ -5,7 +5,7 @@ import org.hibernate.accessor.logging.impl.CoreLog;
 
 import java.lang.invoke.MethodHandle;
 
-public class HibernateAccessorMethodHandleMethodValueWriter<T> implements HibernateAccessorValueWriter<T> {
+public class HibernateAccessorMethodHandleMethodValueWriter implements HibernateAccessorValueWriter {
     private final MethodHandle target;
 
     public HibernateAccessorMethodHandleMethodValueWriter(MethodHandle target) {
@@ -13,7 +13,7 @@ public class HibernateAccessorMethodHandleMethodValueWriter<T> implements Hibern
     }
 
     @Override
-    public void set(Object instance, T value) {
+    public void set(Object instance, Object value) {
         try {
             target.invoke(instance, value);
         } catch (Throwable t) {

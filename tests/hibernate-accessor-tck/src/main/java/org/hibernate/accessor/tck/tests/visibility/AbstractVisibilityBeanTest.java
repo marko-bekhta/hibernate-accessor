@@ -57,7 +57,7 @@ public abstract class AbstractVisibilityBeanTest {
         Object bean = instance();
         String testValue = "val-" + fieldName;
 
-        HibernateAccessorValueWriter<String> writer = (HibernateAccessorValueWriter<String>) factory.valueWriter(field);
+        HibernateAccessorValueWriter writer = (HibernateAccessorValueWriter) factory.valueWriter(field);
         HibernateAccessorValueReader<String> reader = (HibernateAccessorValueReader<String>) factory.valueReader(field);
 
         writer.set(bean, testValue);
@@ -79,7 +79,7 @@ public abstract class AbstractVisibilityBeanTest {
         setter.setAccessible(true);
         getter.setAccessible(true);
 
-        HibernateAccessorValueWriter<String> writer = (HibernateAccessorValueWriter<String>) factory.valueWriter(setter);
+        HibernateAccessorValueWriter writer = (HibernateAccessorValueWriter) factory.valueWriter(setter);
         HibernateAccessorValueReader<String> reader = (HibernateAccessorValueReader<String>) factory.valueReader(getter);
 
         writer.set(bean, value);

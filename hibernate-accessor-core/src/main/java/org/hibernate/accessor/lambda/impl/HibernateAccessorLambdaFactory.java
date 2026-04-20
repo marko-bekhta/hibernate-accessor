@@ -57,28 +57,33 @@ public class HibernateAccessorLambdaFactory implements HibernateAccessorFactory 
     }
 
     @Override
-    public HibernateAccessorValueWriter<?> valueWriter(Field field) {
+    public HibernateAccessorValueWriter valueWriter(Field field) {
         try {
-            return new LambdaFieldValueWriter<>(lookup.unreflectSetter(field));
+            return new LambdaFieldValueWriter(lookup.unreflectSetter(field));
         } catch (IllegalAccessException e) {
             throw CoreLog.INSTANCE.errorCreatingHandle(field, e, e.getMessage());
         }
     }
 
     @Override
-    public HibernateAccessorValueWriter<?> valueWriter(Method setter) {
+    public HibernateAccessorValueWriter valueWriter(Method setter) {
         try {
             MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(setter.getDeclaringClass(), this.lookup);
             MethodHandle target = lookup.unreflect(setter);
+
+            Class<?> paramType = setter.getParameterTypes()[0].isPrimitive()
+                    ? MethodType.methodType(setter.getParameterTypes()[0]).wrap().returnType()
+                    : setter.getParameterTypes()[0];
+
             CallSite site = LambdaMetafactory.metafactory(
                     lookup,
                     "set",
                     MethodType.methodType(HibernateAccessorValueWriter.class),
                     MethodType.methodType(void.class, Object.class, Object.class),
                     target,
-                    MethodType.methodType(void.class, setter.getDeclaringClass(), setter.getParameterTypes()[0])
+                    MethodType.methodType(void.class, setter.getDeclaringClass(), paramType)
             );
-            return (HibernateAccessorValueWriter<?>) site.getTarget().invokeExact();
+            return (HibernateAccessorValueWriter) site.getTarget().invokeExact();
         } catch (Throwable t) {
             throw new RuntimeException("Failed to create lambda for " + setter, t);
         }

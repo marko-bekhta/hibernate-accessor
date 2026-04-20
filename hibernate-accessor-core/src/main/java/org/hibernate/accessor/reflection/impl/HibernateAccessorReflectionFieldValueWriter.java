@@ -6,16 +6,17 @@ import org.hibernate.accessor.logging.impl.CoreLog;
 import java.lang.reflect.Field;
 import java.util.Objects;
 
-public class HibernateAccessorReflectionFieldValueWriter<T> implements HibernateAccessorValueWriter<T> {
+public class HibernateAccessorReflectionFieldValueWriter implements HibernateAccessorValueWriter {
 
     private final Field field;
 
     public HibernateAccessorReflectionFieldValueWriter(Field field) {
         this.field = field;
+        field.setAccessible(true);
     }
 
     @Override
-    public void set(Object instance, T value) {
+    public void set(Object instance, Object value) {
         try {
             field.set(instance, value);
         } catch (RuntimeException | IllegalAccessException e) {
@@ -39,7 +40,7 @@ public class HibernateAccessorReflectionFieldValueWriter<T> implements Hibernate
         if (obj == null || !obj.getClass().equals(getClass())) {
             return false;
         }
-        HibernateAccessorReflectionFieldValueWriter<?> other = (HibernateAccessorReflectionFieldValueWriter<?>) obj;
+        HibernateAccessorReflectionFieldValueWriter other = (HibernateAccessorReflectionFieldValueWriter) obj;
         return field.equals(other.field);
     }
 }

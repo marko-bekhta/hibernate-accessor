@@ -47,18 +47,18 @@ public class HibernateAccessorMethodHandleFactory implements HibernateAccessorFa
     }
 
     @Override
-    public HibernateAccessorValueWriter<?> valueWriter(Field field) {
+    public HibernateAccessorValueWriter valueWriter(Field field) {
         try {
-            return new HibernateAccessorMethodHandleFieldValueWriter<>(lookup.unreflectSetter(field));
+            return new HibernateAccessorMethodHandleFieldValueWriter(lookup.unreflectSetter(field));
         } catch (IllegalAccessException e) {
             throw CoreLog.INSTANCE.errorCreatingHandle(field, e, e.getMessage());
         }
     }
 
     @Override
-    public HibernateAccessorValueWriter<?> valueWriter(Method setter) {
+    public HibernateAccessorValueWriter valueWriter(Method setter) {
         try {
-            return new HibernateAccessorMethodHandleMethodValueWriter<>(lookup.unreflect(setter));
+            return new HibernateAccessorMethodHandleMethodValueWriter(lookup.unreflect(setter));
         } catch (IllegalAccessException e) {
             throw CoreLog.INSTANCE.errorCreatingHandle(setter, e, e.getMessage());
         }

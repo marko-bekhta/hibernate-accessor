@@ -1,5 +1,5 @@
 package org.hibernate.accessor;
 
-public interface HibernateAccessorValueWriter<T> {
-    void set(Object instance, T value);
+public interface HibernateAccessorValueWriter {
+    void set(Object instance, Object value);
 }

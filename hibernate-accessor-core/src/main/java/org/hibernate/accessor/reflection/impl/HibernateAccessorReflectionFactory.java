@@ -27,13 +27,13 @@ public class HibernateAccessorReflectionFactory implements HibernateAccessorFact
     }
 
     @Override
-    public HibernateAccessorValueWriter<?> valueWriter(Field field) {
-        return new HibernateAccessorReflectionFieldValueWriter<>(field);
+    public HibernateAccessorValueWriter valueWriter(Field field) {
+        return new HibernateAccessorReflectionFieldValueWriter(field);
     }
 
     @Override
-    public HibernateAccessorValueWriter<?> valueWriter(Method setter) {
-        return new HibernateAccessorReflectionMethodValueWriter<>(setter);
+    public HibernateAccessorValueWriter valueWriter(Method setter) {
+        return new HibernateAccessorReflectionMethodValueWriter(setter);
     }
 
 

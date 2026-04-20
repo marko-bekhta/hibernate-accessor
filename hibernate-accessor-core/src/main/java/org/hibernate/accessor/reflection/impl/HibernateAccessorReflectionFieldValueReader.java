@@ -12,6 +12,7 @@ public class HibernateAccessorReflectionFieldValueReader<T> implements Hibernate
 
     public HibernateAccessorReflectionFieldValueReader(Field field) {
         this.field = field;
+        field.setAccessible(true);
     }
 
     @Override
