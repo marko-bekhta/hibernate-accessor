@@ -3,12 +3,13 @@ package org.hibernate.accessor;
 import org.hibernate.accessor.lambda.impl.HibernateAccessorLambdaFactory;
 import org.hibernate.accessor.reflection.impl.HibernateAccessorReflectionFactory;
 
+import java.io.Serializable;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-public interface HibernateAccessorFactory {
+public interface HibernateAccessorFactory extends Serializable {
 
     static HibernateAccessorFactory reflection() {
         return new HibernateAccessorReflectionFactory();
@@ -24,7 +25,7 @@ public interface HibernateAccessorFactory {
 
     HibernateAccessorValueReader<?> valueReader(Method method);
 
-    HibernateAccessorValueWriter<?> valueWriter(Field field);
+    HibernateAccessorValueWriter valueWriter(Field field);
 
-    HibernateAccessorValueWriter<?> valueWriter(Method setter);
+    HibernateAccessorValueWriter valueWriter(Method setter);
 }
