@@ -17,6 +17,9 @@ public class HibernateAccessorMethodHandleMethodValueWriter implements Hibernate
         try {
             target.invoke(instance, value);
         } catch (Throwable t) {
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
             throw CoreLog.INSTANCE.errorInvokingHandle(target, String.valueOf(instance), t, t.getMessage());
         }
     }

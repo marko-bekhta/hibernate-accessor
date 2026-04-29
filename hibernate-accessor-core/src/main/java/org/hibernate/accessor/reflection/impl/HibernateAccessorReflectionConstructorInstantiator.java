@@ -14,6 +14,7 @@ public class HibernateAccessorReflectionConstructorInstantiator<T> implements Hi
 
     public HibernateAccessorReflectionConstructorInstantiator(Constructor<T> constructor) {
         this.constructor = constructor;
+        constructor.setAccessible(true);
     }
 
     @Override

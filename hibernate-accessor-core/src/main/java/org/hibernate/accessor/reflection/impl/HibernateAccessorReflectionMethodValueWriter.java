@@ -3,7 +3,6 @@ package org.hibernate.accessor.reflection.impl;
 import org.hibernate.accessor.HibernateAccessorValueWriter;
 import org.hibernate.accessor.logging.impl.CoreLog;
 
-import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Objects;
@@ -14,7 +13,6 @@ public class HibernateAccessorReflectionMethodValueWriter implements HibernateAc
 
     public HibernateAccessorReflectionMethodValueWriter(Method setter) {
         this.method = setter;
-        MethodHandles.Lookup lookup;
         method.setAccessible(true);
     }
 

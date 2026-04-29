@@ -52,7 +52,10 @@ public class HibernateAccessorLambdaFactory implements HibernateAccessorFactory 
             );
             return (HibernateAccessorValueReader<?>) site.getTarget().invokeExact();
         } catch (Throwable t) {
-            throw new RuntimeException("Failed to create lambda for " + method, t);
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw CoreLog.INSTANCE.errorCreatingHandle(method, t, t.getMessage());
         }
     }
 
@@ -85,7 +88,10 @@ public class HibernateAccessorLambdaFactory implements HibernateAccessorFactory 
             );
             return (HibernateAccessorValueWriter) site.getTarget().invokeExact();
         } catch (Throwable t) {
-            throw new RuntimeException("Failed to create lambda for " + setter, t);
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw CoreLog.INSTANCE.errorCreatingHandle(setter, t, t.getMessage());
         }
     }
 }

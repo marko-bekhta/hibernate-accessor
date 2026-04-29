@@ -18,6 +18,9 @@ public class HibernateAccessorMethodHandleMethodValueReader<T> implements Hibern
         try {
             return (T) target.invoke(instance);
         } catch (Throwable t) {
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
             throw CoreLog.INSTANCE.errorInvokingHandle(target, String.valueOf(instance), t, t.getMessage());
         }
     }

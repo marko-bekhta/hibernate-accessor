@@ -17,6 +17,9 @@ public class HibernateAccessorMethodHandleFieldValueWriter implements HibernateA
         try {
             setter.invoke(instance, value);
         } catch (Throwable t) {
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
             throw CoreLog.INSTANCE.errorInvokingHandle(setter, String.valueOf(instance), t, t.getMessage());
         }
     }

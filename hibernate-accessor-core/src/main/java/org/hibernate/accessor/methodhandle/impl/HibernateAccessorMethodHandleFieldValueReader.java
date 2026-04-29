@@ -18,6 +18,9 @@ public class HibernateAccessorMethodHandleFieldValueReader<T> implements Hiberna
         try {
             return (T) getter.invoke(instance);
         } catch (Throwable t) {
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
             throw CoreLog.INSTANCE.errorInvokingHandle(getter, String.valueOf(instance), t, t.getMessage());
         }
     }
