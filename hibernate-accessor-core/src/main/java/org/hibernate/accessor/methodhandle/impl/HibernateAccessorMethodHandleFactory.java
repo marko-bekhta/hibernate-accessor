@@ -22,7 +22,8 @@ public class HibernateAccessorMethodHandleFactory implements HibernateAccessorFa
     @Override
     public <T> HibernateAccessorInstantiator<T> instantiator(Constructor<T> constructor) {
         try {
-            return new HibernateAccessorMethodHandleInstantiator<>(lookup.unreflectConstructor(constructor));
+            return new HibernateAccessorMethodHandleInstantiator<>(
+                    privateLookup(constructor.getDeclaringClass()).unreflectConstructor(constructor));
         } catch (IllegalAccessException e) {
             throw CoreLog.INSTANCE.errorCreatingHandle(constructor, e, e.getMessage());
         }
@@ -31,7 +32,8 @@ public class HibernateAccessorMethodHandleFactory implements HibernateAccessorFa
     @Override
     public HibernateAccessorValueReader<?> valueReader(Field field) {
         try {
-            return new HibernateAccessorMethodHandleFieldValueReader<>(lookup.unreflectGetter(field));
+            return new HibernateAccessorMethodHandleFieldValueReader<>(
+                    privateLookup(field.getDeclaringClass()).unreflectGetter(field));
         } catch (IllegalAccessException e) {
             throw CoreLog.INSTANCE.errorCreatingHandle(field, e, e.getMessage());
         }
@@ -40,7 +42,8 @@ public class HibernateAccessorMethodHandleFactory implements HibernateAccessorFa
     @Override
     public HibernateAccessorValueReader<?> valueReader(Method method) {
         try {
-            return new HibernateAccessorMethodHandleMethodValueReader<>(lookup.unreflect(method));
+            return new HibernateAccessorMethodHandleMethodValueReader<>(
+                    privateLookup(method.getDeclaringClass()).unreflect(method));
         } catch (IllegalAccessException e) {
             throw CoreLog.INSTANCE.errorCreatingHandle(method, e, e.getMessage());
         }
@@ -49,7 +52,8 @@ public class HibernateAccessorMethodHandleFactory implements HibernateAccessorFa
     @Override
     public HibernateAccessorValueWriter valueWriter(Field field) {
         try {
-            return new HibernateAccessorMethodHandleFieldValueWriter(lookup.unreflectSetter(field));
+            return new HibernateAccessorMethodHandleFieldValueWriter(
+                    privateLookup(field.getDeclaringClass()).unreflectSetter(field));
         } catch (IllegalAccessException e) {
             throw CoreLog.INSTANCE.errorCreatingHandle(field, e, e.getMessage());
         }
@@ -58,9 +62,14 @@ public class HibernateAccessorMethodHandleFactory implements HibernateAccessorFa
     @Override
     public HibernateAccessorValueWriter valueWriter(Method setter) {
         try {
-            return new HibernateAccessorMethodHandleMethodValueWriter(lookup.unreflect(setter));
+            return new HibernateAccessorMethodHandleMethodValueWriter(
+                    privateLookup(setter.getDeclaringClass()).unreflect(setter));
         } catch (IllegalAccessException e) {
             throw CoreLog.INSTANCE.errorCreatingHandle(setter, e, e.getMessage());
         }
+    }
+
+    private MethodHandles.Lookup privateLookup(Class<?> targetClass) throws IllegalAccessException {
+        return MethodHandles.privateLookupIn(targetClass, this.lookup);
     }
 }

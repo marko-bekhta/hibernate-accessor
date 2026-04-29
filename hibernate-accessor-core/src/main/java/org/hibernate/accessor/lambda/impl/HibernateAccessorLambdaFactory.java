@@ -31,7 +31,7 @@ public class HibernateAccessorLambdaFactory implements HibernateAccessorFactory 
     @Override
     public HibernateAccessorValueReader<?> valueReader(Field field) {
         try {
-            return new LambdaFieldValueReader<>(lookup.unreflectGetter(field));
+            return new LambdaFieldValueReader<>(MethodHandles.privateLookupIn(field.getDeclaringClass(), this.lookup).unreflectGetter(field));
         } catch (IllegalAccessException e) {
             throw CoreLog.INSTANCE.errorCreatingHandle(field, e, e.getMessage());
         }
@@ -59,7 +59,7 @@ public class HibernateAccessorLambdaFactory implements HibernateAccessorFactory 
     @Override
     public HibernateAccessorValueWriter valueWriter(Field field) {
         try {
-            return new LambdaFieldValueWriter(lookup.unreflectSetter(field));
+            return new LambdaFieldValueWriter(MethodHandles.privateLookupIn(field.getDeclaringClass(), this.lookup).unreflectSetter(field));
         } catch (IllegalAccessException e) {
             throw CoreLog.INSTANCE.errorCreatingHandle(field, e, e.getMessage());
         }
