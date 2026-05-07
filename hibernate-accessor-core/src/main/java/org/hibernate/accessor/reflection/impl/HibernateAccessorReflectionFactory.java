@@ -5,11 +5,14 @@ import org.hibernate.accessor.HibernateAccessorInstantiator;
 import org.hibernate.accessor.HibernateAccessorValueReader;
 import org.hibernate.accessor.HibernateAccessorValueWriter;
 
+import java.io.Serial;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 public class HibernateAccessorReflectionFactory implements HibernateAccessorFactory {
+
+    public static final HibernateAccessorReflectionFactory INSTANCE = new HibernateAccessorReflectionFactory();
 
     @Override
     public <T> HibernateAccessorInstantiator<T> instantiator(Constructor<T> constructor) {
@@ -36,5 +39,9 @@ public class HibernateAccessorReflectionFactory implements HibernateAccessorFact
         return new HibernateAccessorReflectionMethodValueWriter(setter);
     }
 
+    @Serial
+    private Object readResolve() {
+        return INSTANCE;
+    }
 
 }
