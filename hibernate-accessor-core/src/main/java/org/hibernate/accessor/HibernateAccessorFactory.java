@@ -12,7 +12,7 @@ import java.lang.reflect.Method;
 public interface HibernateAccessorFactory extends Serializable {
 
     static HibernateAccessorFactory reflection() {
-        return new HibernateAccessorReflectionFactory();
+        return HibernateAccessorReflectionFactory.INSTANCE;
     }
 
     static HibernateAccessorFactory lambda(MethodHandles.Lookup lookup) {
