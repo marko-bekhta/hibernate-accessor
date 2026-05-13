@@ -1,0 +1,70 @@
+name: GH Actions CI
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
+    branches:
+      # Pattern order matters: the last matching inclusion/exclusion wins
+      - '**'
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  MAVEN_ARGS: "-e -B --settings .github/mvn-settings.xml --fail-at-end -Pci-build --no-transfer-progress"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{matrix.os.name}}
+    runs-on: ${{ matrix.os.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - {
+            name: "Linux JDK 25",
+            runs-on: 'ubuntu-latest',
+            java: {
+              version: 25
+            },
+            maven: {
+              args: ''
+            }
+          }
+          - {
+            name: "Windows JDK 25",
+            runs-on: 'windows-latest',
+            java: {
+              version: 25
+            },
+            maven: {
+              args: ''
+            }
+          }
+    steps:
+      - name: Support longpaths on Windows
+        if: "startsWith(matrix.os.runs-on, 'windows')"
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up Java ${{ matrix.os.java.version }}
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # 5.2.0
+        with:
+          java-version: ${{ matrix.os.java.version }}
+          distribution: temurin
+      - name: Set up Maven
+        run: ./mvnw -v
+
+      - name: Build code and run tests and basic checks (Standalone)
+        run: |
+          ./mvnw $MAVEN_ARGS ${{ matrix.os.maven.args }} clean install 
