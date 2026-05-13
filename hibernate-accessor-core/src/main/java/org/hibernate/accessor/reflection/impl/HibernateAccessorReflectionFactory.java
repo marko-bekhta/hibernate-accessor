@@ -14,6 +14,9 @@ public class HibernateAccessorReflectionFactory implements HibernateAccessorFact
 
     public static final HibernateAccessorReflectionFactory INSTANCE = new HibernateAccessorReflectionFactory();
 
+    private HibernateAccessorReflectionFactory() {
+    }
+
     @Override
     public <T> HibernateAccessorInstantiator<T> instantiator(Constructor<T> constructor) {
         return new HibernateAccessorReflectionConstructorInstantiator<>(constructor);
