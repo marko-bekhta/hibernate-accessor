@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright: Red Hat Inc. and Hibernate Authors
+ * Copyright: Hibernate Authors. See AUTHORS.txt.
  */
 package org.hibernate.accessor.performance.entities;
 
