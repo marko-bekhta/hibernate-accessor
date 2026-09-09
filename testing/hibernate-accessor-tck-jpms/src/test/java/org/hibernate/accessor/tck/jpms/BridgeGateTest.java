@@ -8,23 +8,22 @@ import java.lang.invoke.MethodHandles;
 
 import org.hibernate.accessor.asm.AsmAccessorFactory;
 import org.hibernate.accessor.bytebuddy.ByteBuddyAccessorFactory;
+import org.hibernate.accessor.spi.CrossClassLoaderLookupBridge;
 import org.hibernate.accessor.tck.jpms.entities.BridgeGateProbe;
 import org.hibernate.accessor.tck.jpms.entities.SimpleEntity;
 
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Regression tests for the authorisation checks on the cross-module bridge method
- * ({@code $$HibernateAccessorBridge.$$defineAccessor}) injected into the entity module.
+ * Regression tests for the entry-point authorisation checks on
+ * {@link CrossClassLoaderLookupBridge}.
  * <p>
- * The gate is exercised from inside the entity module via {@link BridgeGateProbe}: that is
- * the only vantage point from which the package-private bridge method is even reachable.
- * The first check rejects lookups lacking full-privilege access; the second compares the
- * caller's module <em>name</em> against the accessor SPI module's name, which rejects
- * callers in any other module. See the probe's javadoc for why the fixture lives in the
- * entity module rather than here.
+ * The bridge verifies that the caller-supplied lookup belongs to the same module that
+ * created the bridge and has full-privilege access. These tests exercise both the
+ * foreign-module and non-full-privilege rejection paths.
  */
 class BridgeGateTest {
 
@@ -56,25 +55,27 @@ class BridgeGateTest {
 
 	@Test
 	void gateRejectsForeignFullPrivilegeLookup() {
-		ensureBridgeInjected();
+		// Create a bridge owned by the test module
+		CrossClassLoaderLookupBridge bridge = new CrossClassLoaderLookupBridge(
+				MethodHandles.lookup(), name -> new byte[0] );
 
-		// A caller inside the target module holds a genuine full-privilege lookup for that
-		// module, and can reach the package-private bridge method — but its module's name
-		// is not the accessor SPI module's name, so the module-name check must reject it.
-		Throwable rejection = BridgeGateProbe.invokeWithForeignFullPrivilegeLookup();
-		assertThat( rejection )
-				.as( "a full-privilege lookup from the wrong module must be rejected" )
+		// A full-privilege lookup from the entity module must be rejected: different module
+		MethodHandles.Lookup foreignLookup = BridgeGateProbe.entityModuleLookup();
+		assertThatThrownBy( () -> bridge.defineAccessor( foreignLookup, SimpleEntity.class, new byte[0] ) )
+				.as( "a full-privilege lookup from a different module must be rejected" )
 				.isInstanceOf( IllegalAccessError.class )
-				.hasMessageContaining( "unauthorised module" );
+				.hasMessageContaining( "different module" );
 	}
 
 	@Test
 	void gateRejectsNonFullPrivilegeLookup() {
-		ensureBridgeInjected();
+		// Create a bridge owned by the test module
+		CrossClassLoaderLookupBridge bridge = new CrossClassLoaderLookupBridge(
+				MethodHandles.lookup(), name -> new byte[0] );
 
-		// A lookup lacking full-privilege access must be rejected before any bytecode is touched.
-		Throwable rejection = BridgeGateProbe.invokeWithoutFullPrivilege();
-		assertThat( rejection )
+		// A lookup from the same module but lacking full-privilege access must be rejected
+		MethodHandles.Lookup downgraded = MethodHandles.publicLookup().in( BridgeGateTest.class );
+		assertThatThrownBy( () -> bridge.defineAccessor( downgraded, SimpleEntity.class, new byte[0] ) )
 				.as( "a lookup without full-privilege access must be rejected" )
 				.isInstanceOf( IllegalAccessError.class )
 				.hasMessageContaining( "full-privilege" );

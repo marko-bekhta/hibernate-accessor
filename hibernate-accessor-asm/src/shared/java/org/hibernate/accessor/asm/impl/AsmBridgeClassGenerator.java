@@ -10,6 +10,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 /**
  * Generates the bridge class bytecode used by {@link CrossClassLoaderLookupBridge}
@@ -22,21 +23,20 @@ import org.objectweb.asm.Opcodes;
  * final class $$HibernateAccessorBridge {
  *     static Object $$defineAccessor(MethodHandles.Lookup proof, Class<?> target, byte[] bytecode)
  *             throws Throwable {
- *         if ( !proof.hasFullPrivilegeAccess() )                 throw new IllegalAccessError( ... );
- *         String name = proof.lookupClass().getModule().getName();
- *         if ( !name.isEmpty() && !AUTHORISED_MODULE_NAME.equals( name ) ) throw new IllegalAccessError( ... );
+ *         MethodHandles.privateLookupIn( $$HibernateAccessorBridge.class, proof ); // access check
  *         MethodHandles.Lookup here = MethodHandles.lookup();            // full-priv, target module
  *         MethodHandles.Lookup tl   = MethodHandles.privateLookupIn( target, here );
  *         Class<?> a = tl.defineHiddenClass( bytecode, true, NESTMATE ).lookupClass();
- *         return a.getDeclaredConstructor().newInstance();
+ *         return a;
  *     }
  * }
  * }</pre>
- * The class and its method are package-private so the method cannot be reached from any
- * other module except through a lookup that already has {@code PACKAGE} access to the
- * target package. The module check compares the caller's module <em>name</em> (baked into
- * the bytecode) rather than the module instance, so the generated class never references
- * this SPI's classes and can load in a classloader that cannot see them.
+ * The class and its method are package-private. The method verifies that the caller's
+ * lookup can access the bridge class's package via
+ * {@link java.lang.invoke.MethodHandles#privateLookupIn}: if the caller could reach
+ * the package, they could already inject their own bridge via
+ * {@link java.lang.invoke.MethodHandles.Lookup#defineClass}, so this bridge is not a
+ * privilege escalation.
  *
  * @see CrossClassLoaderLookupBridge
  */
@@ -46,7 +46,6 @@ final class AsmBridgeClassGenerator {
 	private static final String LOOKUP_DESC = "Ljava/lang/invoke/MethodHandles$Lookup;";
 	private static final String CLASS_OPTION = "java/lang/invoke/MethodHandles$Lookup$ClassOption";
 	private static final String CLASS_OPTION_DESC = "Ljava/lang/invoke/MethodHandles$Lookup$ClassOption;";
-	private static final String AUTHORISED_MODULE_NAME = "org.hibernate.accessor";
 
 	private AsmBridgeClassGenerator() {
 	}
@@ -73,45 +72,30 @@ final class AsmBridgeClassGenerator {
 				"(" + LOOKUP_DESC + "Ljava/lang/Class;[B)Ljava/lang/Object;", null, null );
 		mv.visitCode();
 
-		// if ( !proof.hasFullPrivilegeAccess() ) throw new IllegalAccessError( ... );
-		final Label hasPrivilege = new Label();
+		// Access check: MethodHandles.privateLookupIn( $$bridge.class, proof )
+		// If the caller's lookup can reach this package, they could already inject
+		// their own bridge — so this one is not a privilege escalation.
+		final Label tryStart = new Label();
+		final Label tryEnd = new Label();
+		final Label catchHandler = new Label();
+		final Label afterCheck = new Label();
+		mv.visitTryCatchBlock( tryStart, tryEnd, catchHandler,
+				"java/lang/IllegalAccessException" );
+
+		mv.visitLabel( tryStart );
+		mv.visitLdcInsn( Type.getObjectType( internalName ) );
 		mv.visitVarInsn( Opcodes.ALOAD, 0 );
-		mv.visitMethodInsn( Opcodes.INVOKEVIRTUAL, LOOKUP, "hasFullPrivilegeAccess", "()Z", false );
-		mv.visitJumpInsn( Opcodes.IFNE, hasPrivilege );
-		throwIllegalAccessError( mv, "accessor bridge invoked without a full-privilege lookup" );
-		mv.visitLabel( hasPrivilege );
+		mv.visitMethodInsn( Opcodes.INVOKESTATIC, "java/lang/invoke/MethodHandles", "privateLookupIn",
+				"(Ljava/lang/Class;" + LOOKUP_DESC + ")" + LOOKUP_DESC, false );
+		mv.visitInsn( Opcodes.POP );
+		mv.visitLabel( tryEnd );
+		mv.visitJumpInsn( Opcodes.GOTO, afterCheck );
 
-		// Compare the caller module's name against the SPI module's name, baked into the
-		// bytecode at generation time. We acknowledge this is weaker than comparing the
-		// Module instances: two *different* module instances sharing the same module name
-		// (e.g. the same module in two layers, or a duplicate jar) would pass this check.
-		// That is acceptable because the caller can only reach the package-private bridge
-		// method from its own module, where it can already do anything the bridge does; the
-		// name check is defence-in-depth and, importantly, keeps the generated class free of
-		// any reference to this SPI's classes so it can load in a classloader that cannot
-		// see them.
-		// if ( !AUTHORISED_MODULE_NAME.equals( proof.lookupClass().getModule().getName() ) )
-		//         throw new IllegalAccessError( ... );
-		final Label authorised = new Label();
-		mv.visitVarInsn( Opcodes.ALOAD, 0 );
-		mv.visitMethodInsn( Opcodes.INVOKEVIRTUAL, LOOKUP, "lookupClass", "()Ljava/lang/Class;", false );
-		mv.visitMethodInsn( Opcodes.INVOKEVIRTUAL, "java/lang/Class", "getModule", "()Ljava/lang/Module;", false );
-		mv.visitMethodInsn( Opcodes.INVOKEVIRTUAL, "java/lang/Module", "getName", "()Ljava/lang/String;", false );
-		mv.visitVarInsn( Opcodes.ASTORE, 6 );
+		mv.visitLabel( catchHandler );
+		mv.visitInsn( Opcodes.POP );
+		throwIllegalAccessError( mv, "caller's lookup cannot access the bridge's package" );
 
-		// if ( name.isEmpty() ) goto authorised;
-		mv.visitVarInsn( Opcodes.ALOAD, 6 );
-		mv.visitMethodInsn( Opcodes.INVOKEVIRTUAL, "java/lang/String", "isEmpty", "()Z", false );
-		mv.visitJumpInsn( Opcodes.IFNE, authorised );
-
-		// if ( AUTHORISED_MODULE_NAME.equals( name ) ) goto authorised;
-		mv.visitLdcInsn( AUTHORISED_MODULE_NAME );
-		mv.visitVarInsn( Opcodes.ALOAD, 6 );
-		mv.visitMethodInsn( Opcodes.INVOKEVIRTUAL, "java/lang/Object", "equals",
-				"(Ljava/lang/Object;)Z", false );
-		mv.visitJumpInsn( Opcodes.IFNE, authorised );
-		throwIllegalAccessError( mv, "accessor bridge invoked by an unauthorised module" );
-		mv.visitLabel( authorised );
+		mv.visitLabel( afterCheck );
 
 		// Lookup here = MethodHandles.lookup();
 		mv.visitMethodInsn( Opcodes.INVOKESTATIC, "java/lang/invoke/MethodHandles", "lookup",
@@ -138,18 +122,8 @@ final class AsmBridgeClassGenerator {
 		mv.visitMethodInsn( Opcodes.INVOKEVIRTUAL, LOOKUP, "defineHiddenClass",
 				"([BZ[" + CLASS_OPTION_DESC + ")" + LOOKUP_DESC, false );
 		mv.visitMethodInsn( Opcodes.INVOKEVIRTUAL, LOOKUP, "lookupClass", "()Ljava/lang/Class;", false );
-		mv.visitVarInsn( Opcodes.ASTORE, 5 );
 
-		// return a.getDeclaredConstructor().newInstance();
-		mv.visitVarInsn( Opcodes.ALOAD, 5 );
-		mv.visitInsn( Opcodes.ICONST_0 );
-		mv.visitTypeInsn( Opcodes.ANEWARRAY, "java/lang/Class" );
-		mv.visitMethodInsn( Opcodes.INVOKEVIRTUAL, "java/lang/Class", "getDeclaredConstructor",
-				"([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;", false );
-		mv.visitInsn( Opcodes.ICONST_0 );
-		mv.visitTypeInsn( Opcodes.ANEWARRAY, "java/lang/Object" );
-		mv.visitMethodInsn( Opcodes.INVOKEVIRTUAL, "java/lang/reflect/Constructor", "newInstance",
-				"([Ljava/lang/Object;)Ljava/lang/Object;", false );
+		// return a;
 		mv.visitInsn( Opcodes.ARETURN );
 
 		mv.visitMaxs( 0, 0 );

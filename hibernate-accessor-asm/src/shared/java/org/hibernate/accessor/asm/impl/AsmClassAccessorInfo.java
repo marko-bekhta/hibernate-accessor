@@ -39,7 +39,7 @@ final class AsmClassAccessorInfo {
 		this.constructorIndices = constructorIndices;
 	}
 
-	static AsmClassAccessorInfo create(Class<?> declaringClass, CrossClassLoaderLookupBridge lookupBridge, BytecodeDumper bytecodeDumper) {
+	static AsmClassAccessorInfo create(Class<?> declaringClass, CrossClassLoaderLookupBridge lookupBridge, java.lang.invoke.MethodHandles.Lookup callerLookup, BytecodeDumper bytecodeDumper) {
 		Field[] fields = Arrays.stream( declaringClass.getDeclaredFields() )
 				.filter( f -> !Modifier.isStatic( f.getModifiers() ) )
 				.toArray( Field[]::new );
@@ -78,7 +78,7 @@ final class AsmClassAccessorInfo {
 
 		try {
 			AsmBulkAccessor instance =
-					(AsmBulkAccessor) lookupBridge.defineAccessor( declaringClass, bytecode );
+					(AsmBulkAccessor) lookupBridge.defineAccessor( callerLookup, declaringClass, bytecode );
 			return new AsmClassAccessorInfo( instance, fieldIndices, getterMethodIndices, setterMethodIndices, constructorIndices );
 		}
 		catch (Exception e) {
