@@ -52,6 +52,7 @@ public class AsmAccessorFactory implements org.hibernate.accessor.asm.AsmAccesso
 			return new PerMemberAccessors();
 		}
 	};
+	private final MethodHandles.Lookup callerLookup;
 	private final CrossClassLoaderLookupBridge lookupBridge;
 	private final BytecodeDumper bytecodeDumper;
 	private final AsmGenerationStrategy generationStrategy;
@@ -62,13 +63,14 @@ public class AsmAccessorFactory implements org.hibernate.accessor.asm.AsmAccesso
 	}
 
 	public AsmAccessorFactory(AccessorConfiguration configuration) {
-		this.lookupBridge = new CrossClassLoaderLookupBridge( configuration.lookup(), AsmBridgeClassGenerator::generate );
+		this.callerLookup = configuration.lookup();
+		this.lookupBridge = new CrossClassLoaderLookupBridge( callerLookup, AsmBridgeClassGenerator::generate );
 		this.bytecodeDumper = new BytecodeDumper( configuration );
 		this.generationStrategy = AsmAccessorConfiguration.generationStrategy( configuration );
 		this.cache = new ClassValue<>() {
 			@Override
 			protected AsmClassAccessorInfo computeValue(Class<?> type) {
-				return AsmClassAccessorInfo.create( type, lookupBridge, bytecodeDumper );
+				return AsmClassAccessorInfo.create( type, lookupBridge, callerLookup, bytecodeDumper );
 			}
 		};
 	}
@@ -199,7 +201,7 @@ public class AsmAccessorFactory implements org.hibernate.accessor.asm.AsmAccesso
 		final byte[] bytecode = AsmPerMemberClassGenerator.generateReader( member );
 		bytecodeDumper.dump( Type.getInternalName( targetClass ) + "$$HibernateAccessorReader_" + member.getName() + "_" + java.util.UUID.randomUUID(), bytecode );
 		try {
-			return (ValueReader<?>) lookupBridge.defineAccessor( targetClass, bytecode );
+			return (ValueReader<?>) lookupBridge.defineAccessor( callerLookup, targetClass, bytecode );
 		}
 		catch (Exception e) {
 			throw new AccessorException( "Failed to create per-member value reader for " + member, e );
@@ -211,7 +213,7 @@ public class AsmAccessorFactory implements org.hibernate.accessor.asm.AsmAccesso
 		final byte[] bytecode = AsmPerMemberClassGenerator.generateWriter( member );
 		bytecodeDumper.dump( Type.getInternalName( targetClass ) + "$$HibernateAccessorWriter_" + member.getName() + "_" + java.util.UUID.randomUUID(), bytecode );
 		try {
-			return (ValueWriter) lookupBridge.defineAccessor( targetClass, bytecode );
+			return (ValueWriter) lookupBridge.defineAccessor( callerLookup, targetClass, bytecode );
 		}
 		catch (Exception e) {
 			throw new AccessorException( "Failed to create per-member value writer for " + member, e );
@@ -223,7 +225,7 @@ public class AsmAccessorFactory implements org.hibernate.accessor.asm.AsmAccesso
 		final byte[] bytecode = AsmMultiValueClassGenerator.generateReader( targetClass, members );
 		bytecodeDumper.dump( Type.getInternalName( targetClass ) + "$$HibernateAccessorMultiReader_" + java.util.UUID.randomUUID(), bytecode );
 		try {
-			return (MultiValueReader) lookupBridge.defineAccessor( targetClass, bytecode );
+			return (MultiValueReader) lookupBridge.defineAccessor( callerLookup, targetClass, bytecode );
 		}
 		catch (Exception e) {
 			throw new MultiValueAccessorGenerationException(
@@ -236,7 +238,7 @@ public class AsmAccessorFactory implements org.hibernate.accessor.asm.AsmAccesso
 		final byte[] bytecode = AsmMultiValueClassGenerator.generateWriter( targetClass, members );
 		bytecodeDumper.dump( Type.getInternalName( targetClass ) + "$$HibernateAccessorMultiWriter_" + java.util.UUID.randomUUID(), bytecode );
 		try {
-			return (MultiValueWriter) lookupBridge.defineAccessor( targetClass, bytecode );
+			return (MultiValueWriter) lookupBridge.defineAccessor( callerLookup, targetClass, bytecode );
 		}
 		catch (Exception e) {
 			throw new MultiValueAccessorGenerationException(
