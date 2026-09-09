@@ -1,0 +1,11 @@
+# This file lists copyright owners of the project.
+# The list is not exhaustive: other copyright owners exist.
+
+# Corporate contributors
+
+IBM Corporation.
+
+# Individual contributors
+
+Andrea Boriero <andrea@hibernate.org>
+Marko Bekhta <marko.prykladna@gmail.com>
